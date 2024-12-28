@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Admin Management</title>
+</head>
+<body>
+  <div id="navbar"></div>
+  <h1>Admin Management Page</h1>
+  <form id="bookForm">
+    <input type="text" id="title" placeholder="Book Title" required />
+    <input type="text" id="author" placeholder="Author" required />
+    <select id="category" required>
+      <option value="Fiction">Fiction</option>
+      <option value="Comedy">Comedy</option>
+      <option value="Technical">Technical</option>
+    </select>
+    <button type="submit">Add Book</button>
+  </form>
+  <div id="booksGrid"></div>
+
+  <script>
+    const baseUrl = "https://glitch.example.com/books/";
+    const loginData = JSON.parse(localStorage.getItem("loginData"));
+
+    if (!loginData || loginData.email !== "admin@empher.com") {
+      alert("Admin Not Logged In.");
+      window.location.href = "index.html";
+    }
+
+    document.getElementById("bookForm").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const title = document.getElementById("title").value;
+      const author = document.getElementById("author").value;
+      const category = document.getElementById("category").value;
+
+      try {
+        await fetch(baseUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title,
+            author,
+            category,
+            isAvailable: true,
+            isVerified: false,
+            borrowedDays: null,
+            imageUrl: "https://m.media-amazon.com/images/I/71ZB18P3inL._SY522_.jpg",
+          }),
+        });
+        alert("Book Added Successfully.");
+        loadBooks();
+      } catch (error) {
+        console.error(error);
+        alert("Failed to add book.");
+      }
+    });
+
+    async function loadBooks() {
+      const response = await fetch(baseUrl);
+      const books = await response.json();
+      const grid = document.getElementById("booksGrid");
+      grid.innerHTML = books
+        .map(
+          (book) => `
+        <div>
+          <img src="${book.imageUrl}" alt="Book Cover" />
+          <p>${book.title}</p>
+          <p>${book.author}</p>
+          <p>${book.category}</p>
+          <button ${book.isVerified ? "disabled" : ""} onclick="verifyBook(${book.id})">
+            Verify Book
+          </button>
+          <button onclick="deleteBook(${book.id})">Delete Book</button>
+        </div>`
+        )
+        .join("");
+    }
+
+    async function verifyBook(id) {
+      const confirm = window.confirm("Are you sure to Verify..?");
+      if (confirm) {
+        await fetch(`${baseUrl}/${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ isVerified: true }),
+        });
+        loadBooks();
+      }
+    }
+
+    async function deleteBook(id) {
+      const confirm = window.confirm("Are you sure to Delete..?");
+      if (confirm) {
+        await fetch(`${baseUrl}/${id}`, { method: "DELETE" });
+        loadBooks();
+      }
+    }
+
+    loadBooks();
+  </script>
+</body>
+</html>
